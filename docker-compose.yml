@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # MySQL Database Container
+  mysql-db:
+    image: mysql:8.0
+    container_name: mysql-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ecommerce_db
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ecom-network
+
+  # Backend Instance 1
+  backend-node-1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend-node-1
+    environment:
+      DB_HOST: mysql-db
+      DB_PORT: 3306
+      DB_NAME: ecommerce_db
+      DB_USER: root
+      DB_PASSWORD: root
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - ecom-network
+
+  # Backend Instance 2
+  backend-node-2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: backend-node-2
+    environment:
+      DB_HOST: mysql-db
+      DB_PORT: 3306
+      DB_NAME: ecommerce_db
+      DB_USER: root
+      DB_PASSWORD: root
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - ecom-network
+
+  # Frontend Container (Vite + Nginx)
+  frontend-app:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend-app
+    depends_on:
+      - backend-node-1
+      - backend-node-2
+    networks:
+      - ecom-network
+
+  # Nginx Gateway / Load Balancer (Exposed on Port 80)
+  nginx-gateway:
+    image: nginx:alpine
+    container_name: nginx-gateway
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend-app
+      - backend-node-1
+      - backend-node-2
+    networks:
+      - ecom-network
+
+volumes:
+  mysql_data:
+
+networks:
+  ecom-network:
+    driver: bridge
