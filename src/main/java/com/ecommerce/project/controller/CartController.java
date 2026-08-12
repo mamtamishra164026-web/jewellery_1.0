@@ -19,7 +19,9 @@ public class CartController {
 
     @GetMapping
     public ResponseEntity<List<CartItem>> getCartItems(Authentication authentication) {
-        checkNotAdmin(authentication);
+        if (isAdmin(authentication)) {
+            return ResponseEntity.ok(java.util.Collections.emptyList());
+        }
         String username = authentication.getName();
         List<CartItem> cartItems = cartService.getCartItems(username);
         return ResponseEntity.ok(cartItems);
@@ -57,13 +59,17 @@ public class CartController {
         return ResponseEntity.ok(cartItems);
     }
 
-    private void checkNotAdmin(Authentication authentication) {
+    private boolean isAdmin(Authentication authentication) {
         if (authentication != null) {
-            boolean isAdmin = authentication.getAuthorities().stream()
+            return authentication.getAuthorities().stream()
                     .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-            if (isAdmin) {
-                throw new com.ecommerce.project.exception.ApiException("Admin cannot place orders");
-            }
+        }
+        return false;
+    }
+
+    private void checkNotAdmin(Authentication authentication) {
+        if (isAdmin(authentication)) {
+            throw new com.ecommerce.project.exception.ApiException("Admin cannot place orders");
         }
     }
 }

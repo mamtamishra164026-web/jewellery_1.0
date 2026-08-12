@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { Home, Heart, ShoppingBag, ClipboardList, Menu, X, MoreVertical, User, LogOut, Info, Search } from 'lucide-react';
 import { HiArrowLeft, HiOutlineCollection } from 'react-icons/hi';
+import { getCategoryColor } from '../data/mockData';
 import API from '../services/api';
 
 export default function Navbar({ backToStore = false, onSelectCategory }) {
@@ -16,6 +17,39 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [desktopDropdownOpen, setDesktopDropdownOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(false);
+  const [navCategories, setNavCategories] = useState(['All', 'Kaleera', 'Chooda', 'Bridal Jewellery', 'Hair Accessories']);
+
+  const loadNavCategories = useCallback(() => {
+    try {
+      const saved = localStorage.getItem('creation_categories_config');
+      let catList = ['Kaleera', 'Chooda', 'Bridal Jewellery', 'Hair Accessories'];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          catList = parsed.map(c => c.name).filter(Boolean);
+        }
+      }
+      API.get('/api/products?size=100').then(res => {
+        if (res.data?.content && Array.isArray(res.data.content)) {
+          const productCats = res.data.content.map(p => p.category).filter(Boolean);
+          const unique = ['All', ...new Set([...catList, ...productCats])];
+          setNavCategories(unique);
+        } else {
+          setNavCategories(['All', ...new Set(catList)]);
+        }
+      }).catch(() => {
+        setNavCategories(['All', ...new Set(catList)]);
+      });
+    } catch (e) {
+      setNavCategories(['All', 'Kaleera', 'Chooda', 'Bridal Jewellery', 'Hair Accessories']);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNavCategories();
+    window.addEventListener('categories-update', loadNavCategories);
+    return () => window.removeEventListener('categories-update', loadNavCategories);
+  }, [loadNavCategories]);
 
   // Auto-suggestion state
   const [suggestions, setSuggestions] = useState([]);
@@ -422,41 +456,23 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
         <div className="bg-[#2A0835] border-t border-[#F39C12]/30 text-white shadow-md">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-10 overflow-x-auto scrollbar-none gap-2 text-xs font-bold font-sans">
-              <div className="flex items-center gap-1 sm:gap-6">
-                <button
-                  onClick={() => handleCategoryClick('All')}
-                  className="px-3 py-1 rounded-full text-white hover:text-[#F39C12] hover:bg-[#3B0A45] transition-all whitespace-nowrap cursor-pointer flex items-center gap-1"
-                >
-                  <span>All Collections</span>
-                </button>
-                <button
-                  onClick={() => handleCategoryClick('Kaleera')}
-                  className="px-3 py-1 rounded-full text-[#F39C12] hover:text-white hover:bg-[#3B0A45] transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#F39C12]"></span>
-                  <span>Kaleera</span>
-                </button>
-                <button
-                  onClick={() => handleCategoryClick('Chooda')}
-                  className="px-3 py-1 rounded-full text-[#F39C12] hover:text-white hover:bg-[#3B0A45] transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-                >
-                  <span className="w-2 h-2 rounded-full bg-rose-400"></span>
-                  <span>Chooda</span>
-                </button>
-                <button
-                  onClick={() => handleCategoryClick('Bridal Jewellery')}
-                  className="px-3 py-1 rounded-full text-[#F39C12] hover:text-white hover:bg-[#3B0A45] transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#8B005D]"></span>
-                  <span>Bridal Jewellery</span>
-                </button>
-                <button
-                  onClick={() => handleCategoryClick('Hair Accessories')}
-                  className="px-3 py-1 rounded-full text-[#F39C12] hover:text-white hover:bg-[#3B0A45] transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
-                >
-                  <span className="w-2 h-2 rounded-full bg-[#F39C12]"></span>
-                  <span>Hair Accessories</span>
-                </button>
+              <div className="flex items-center gap-1 sm:gap-4">
+                {navCategories.map((catName) => (
+                  <button
+                    key={catName}
+                    onClick={() => handleCategoryClick(catName)}
+                    className="px-3 py-1 rounded-full text-[#F39C12] hover:text-white hover:bg-[#3B0A45] transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+                  >
+                    {catName === 'All' ? (
+                      <span className="text-white hover:text-[#F39C12]">All Collections</span>
+                    ) : (
+                      <>
+                        <span className={`w-2 h-2 rounded-full ${getCategoryColor(catName)}`}></span>
+                        <span>{catName}</span>
+                      </>
+                    )}
+                  </button>
+                ))}
               </div>
 
               <div className="hidden lg:flex items-center gap-2 text-[10px] tracking-wider text-[#F39C12] uppercase font-serif">
@@ -467,76 +483,82 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
         </div>
       </nav>
 
-      {/* ── STICKY FLOATING PINTEREST-STYLE BOTTOM NAVBAR WITH DEEP SHADOW ── */}
+      {/* ── STICKY FLOATING PINTEREST-STYLE BOTTOM NAVBAR WITH HIGH CONTRAST & GOLD GLOW ── */}
       <div className="md:hidden">
-        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] bg-[#2A0835]/95 text-white backdrop-blur-lg border border-[#F39C12]/40 shadow-[0_20px_50px_rgba(0,0,0,0.6)] rounded-full px-6 py-3.5 z-50 flex items-center justify-around">
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 w-[92%] max-w-sm bg-[#1E0522]/95 text-white backdrop-blur-xl border-2 border-amber-400/60 shadow-[0_15px_40px_rgba(0,0,0,0.85)] rounded-full px-5 py-2.5 z-50 flex items-center justify-around">
           
           {user?.role === 'ROLE_ADMIN' ? (
             <>
               <Link
                 to="/"
-                className={`flex flex-col items-center justify-center p-1.5 rounded-full transition-all ${
-                  location.pathname === '/' ? 'text-[#F39C12] scale-110' : 'text-white/70 hover:text-white'
+                className={`flex flex-col items-center justify-center p-2 rounded-full transition-all ${
+                  location.pathname === '/' ? 'text-slate-950 bg-amber-400 shadow-md font-bold scale-105 px-3' : 'text-amber-300 hover:text-white'
                 }`}
                 title="Storefront"
               >
-                <Home className="w-5.5 h-5.5" />
+                <Home className="w-5 h-5" />
+                <span className="text-[9px] font-bold mt-0.5">Store</span>
               </Link>
 
               <Link
                 to="/admin"
-                className={`flex flex-col items-center justify-center p-1.5 rounded-full transition-all ${
-                  location.pathname.startsWith('/admin') && !location.hash.includes('orders') ? 'text-[#F39C12] scale-110' : 'text-white/70 hover:text-white'
+                className={`flex flex-col items-center justify-center p-2 rounded-full transition-all ${
+                  location.pathname.startsWith('/admin') && !location.hash.includes('orders') ? 'text-slate-950 bg-amber-400 shadow-md font-bold scale-105 px-3' : 'text-amber-300 hover:text-white'
                 }`}
                 title="Admin Console"
               >
-                <ClipboardList className="w-5.5 h-5.5" />
+                <ClipboardList className="w-5 h-5" />
+                <span className="text-[9px] font-bold mt-0.5">Admin</span>
               </Link>
 
               <button
                 onClick={() => {
                   navigate('/admin', { state: { activeTab: 'orders' } });
                 }}
-                className={`flex flex-col items-center justify-center p-1.5 rounded-full transition-all cursor-pointer ${
-                  location.pathname.startsWith('/admin') && location.hash.includes('orders') ? 'text-[#F39C12] scale-110' : 'text-white/70 hover:text-white'
+                className={`flex flex-col items-center justify-center p-2 rounded-full transition-all cursor-pointer ${
+                  location.pathname.startsWith('/admin') && location.hash.includes('orders') ? 'text-slate-950 bg-amber-400 shadow-md font-bold scale-105 px-3' : 'text-amber-300 hover:text-white'
                 }`}
                 title="Fulfillment"
               >
-                <svg className="w-5.5 h-5.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 014 0m10 0a2 2 0 104 0m-4 0a2 2 0 014 0" />
                 </svg>
+                <span className="text-[9px] font-bold mt-0.5">Orders</span>
               </button>
             </>
           ) : (
             <>
               <Link
                 to="/"
-                className={`flex flex-col items-center justify-center p-1.5 rounded-full transition-all ${
-                  location.pathname === '/' ? 'text-[#F39C12] scale-110' : 'text-white/70 hover:text-white'
+                className={`flex flex-col items-center justify-center p-2 rounded-full transition-all ${
+                  location.pathname === '/' ? 'text-slate-950 bg-amber-400 shadow-md font-bold scale-105 px-3' : 'text-amber-300 hover:text-white'
                 }`}
               >
-                <Home className="w-5.5 h-5.5" />
+                <Home className="w-5 h-5" />
+                <span className="text-[9px] font-bold mt-0.5">Home</span>
               </Link>
 
               <Link
                 to="/wishlist"
-                className={`flex flex-col items-center justify-center p-1.5 rounded-full transition-all ${
-                  location.pathname === '/wishlist' ? 'text-[#F39C12] scale-110' : 'text-white/70 hover:text-white'
+                className={`flex flex-col items-center justify-center p-2 rounded-full transition-all ${
+                  location.pathname === '/wishlist' ? 'text-slate-950 bg-amber-400 shadow-md font-bold scale-105 px-3' : 'text-amber-300 hover:text-white'
                 }`}
               >
-                <Heart className="w-5.5 h-5.5" />
+                <Heart className="w-5 h-5" />
+                <span className="text-[9px] font-bold mt-0.5">Saved</span>
               </Link>
 
               <Link
                 to="/cart"
-                className={`flex flex-col items-center justify-center p-1.5 rounded-full transition-all relative ${
-                  location.pathname === '/cart' ? 'text-[#F39C12] scale-110' : 'text-white/70 hover:text-white'
+                className={`flex flex-col items-center justify-center p-2 rounded-full transition-all relative ${
+                  location.pathname === '/cart' ? 'text-slate-950 bg-amber-400 shadow-md font-bold scale-105 px-3' : 'text-amber-300 hover:text-white'
                 }`}
               >
-                <ShoppingBag className="w-5.5 h-5.5" />
+                <ShoppingBag className="w-5 h-5" />
+                <span className="text-[9px] font-bold mt-0.5">Cart</span>
                 {totalCartItems > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#F39C12] text-[8px] font-bold text-[#2A0835] ring-2 ring-[#2A0835]">
+                  <span className="absolute -top-1 right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-400 text-[8px] font-black text-slate-950 ring-2 ring-[#1E0522]">
                     {totalCartItems}
                   </span>
                 )}
@@ -544,11 +566,12 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
 
               <Link
                 to="/orders"
-                className={`flex flex-col items-center justify-center p-1.5 rounded-full transition-all ${
-                  location.pathname === '/orders' || location.pathname === '/order-success' ? 'text-[#F39C12] scale-110' : 'text-white/70 hover:text-white'
+                className={`flex flex-col items-center justify-center p-2 rounded-full transition-all ${
+                  location.pathname === '/orders' || location.pathname === '/order-success' ? 'text-slate-950 bg-amber-400 shadow-md font-bold scale-105 px-3' : 'text-amber-300 hover:text-white'
                 }`}
               >
-                <ClipboardList className="w-5.5 h-5.5" />
+                <ClipboardList className="w-5 h-5" />
+                <span className="text-[9px] font-bold mt-0.5">Orders</span>
               </Link>
             </>
           )}

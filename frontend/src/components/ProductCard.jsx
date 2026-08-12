@@ -1,14 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, Eye, ShoppingCart, Star, Plus, Minus } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 export default function ProductCard({ product, onQuickView }) {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { cartItems, addToCart, updateQuantity } = useCart();
+  const { cartItems, addToCart, updateQuantity, removeFromCart } = useCart();
   const cartItem = cartItems.find(item => item.product.id === product.id);
   const fallbackImage = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80';
 
@@ -124,63 +124,105 @@ export default function ProductCard({ product, onQuickView }) {
           </h3>
         </Link>
 
-        {/* Price & Action Row */}
-        <div className="flex items-center justify-between gap-3 pt-3 border-t border-pink-800/20 mt-auto">
-          {/* Price */}
-          <div className="flex flex-col">
-            <span className="text-[10px] font-bold text-pink-100/70 uppercase tracking-wider">Price</span>
-            <span className="text-lg font-extrabold text-amber-300 leading-tight">
-              ₹{Number(product.price).toLocaleString('en-IN', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
-            </span>
-          </div>
-
-          {/* Add to Cart or Quantity Controls */}
-          <div className="relative hidden md:block">
+        {/* Price & Action Row (Option 2 with Smooth Morphing Quantity Bar) */}
+        <div className="pt-3 border-t border-pink-800/20 mt-auto min-h-[52px] flex items-center justify-between relative">
+          <AnimatePresence mode="wait">
             {user?.role === 'ROLE_ADMIN' ? (
-              <span className="px-3 py-1.5 bg-[#2A082D] border border-pink-800/40 text-amber-300 text-[11px] font-bold rounded-xl tracking-wide select-none shadow-inner">
-                Admin View
-              </span>
+              <div key="admin-view" className="flex items-center justify-between w-full">
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-bold text-pink-100/70 uppercase tracking-wider">Price</span>
+                  <span className="text-base sm:text-lg font-extrabold text-amber-300 leading-tight">
+                    ₹{Number(product.price).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <span className="px-2.5 py-1 bg-[#2A082D] border border-pink-800/40 text-amber-300 text-[10px] font-bold rounded-xl tracking-wide select-none shadow-inner">
+                  Admin View
+                </span>
+              </div>
             ) : cartItem ? (
-              <div className="flex items-center gap-1 bg-[#2A082D] border border-pink-800/40 rounded-xl p-0.5 shadow-xs">
+              /* Added State: Glowing Full-Width Quantity Controller Bar */
+              <motion.div
+                key="qty-bar"
+                initial={{ opacity: 0, scale: 0.92, y: 4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: 4 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                className="flex items-center justify-between w-full bg-[#2A082D] border border-amber-400/40 rounded-2xl p-1.5 shadow-lg shadow-amber-400/10"
+              >
                 <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(cartItem.id, cartItem.quantity - 1); }}
-                  disabled={cartItem.quantity <= 1}
-                  className="w-7 h-7 flex items-center justify-center text-amber-300 hover:bg-[#330D3A] hover:text-white rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer font-semibold shadow-xs"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (cartItem.quantity > 1) {
+                      updateQuantity(cartItem.id, cartItem.quantity - 1);
+                    } else {
+                      removeFromCart(cartItem.id);
+                    }
+                  }}
+                  className="w-8 h-8 flex items-center justify-center text-amber-300 bg-[#330D3A] hover:bg-rose-600 hover:text-white rounded-xl active:scale-90 transition-all cursor-pointer font-extrabold border border-pink-800/40 shadow-sm shrink-0"
+                  title="Decrease Quantity"
                 >
-                  <Minus className="w-3 h-3" />
+                  <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="w-5 text-center text-xs font-bold text-white">{cartItem.quantity}</span>
+
+                <div className="flex flex-col items-center justify-center leading-none px-2 min-w-0">
+                  <span className="text-sm font-black text-amber-300 font-mono tracking-tight">
+                    {cartItem.quantity}
+                  </span>
+                  <span className="text-[9px] font-bold text-pink-100/80 uppercase tracking-widest mt-0.5">
+                    IN BAG
+                  </span>
+                </div>
+
                 <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); updateQuantity(cartItem.id, cartItem.quantity + 1); }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    updateQuantity(cartItem.id, cartItem.quantity + 1);
+                  }}
                   disabled={cartItem.quantity >= product.stockQuantity}
-                  className="w-7 h-7 flex items-center justify-center text-amber-300 hover:bg-[#330D3A] hover:text-white rounded-lg disabled:opacity-30 disabled:hover:bg-transparent transition-all cursor-pointer font-semibold shadow-xs"
+                  className="w-8 h-8 flex items-center justify-center text-amber-300 bg-[#330D3A] hover:bg-amber-400 hover:text-slate-950 rounded-xl disabled:opacity-30 active:scale-90 transition-all cursor-pointer font-extrabold border border-pink-800/40 shadow-sm shrink-0"
+                  title="Increase Quantity"
                 >
-                  <Plus className="w-3 h-3" />
+                  <Plus className="w-3.5 h-3.5" />
                 </button>
-              </div>
+              </motion.div>
             ) : (
-              <div className="flex items-center gap-1.5">
+              /* Normal State: Price on Left + Compact Square Gold Cart Icon on Right */
+              <motion.div
+                key="normal-price"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center justify-between w-full"
+              >
+                <div className="flex flex-col min-w-0 pr-2">
+                  <span className="text-[10px] font-bold text-pink-100/70 uppercase tracking-wider">Price</span>
+                  <span className="text-base sm:text-lg font-extrabold text-amber-300 leading-tight truncate">
+                    ₹{Number(product.price).toLocaleString('en-IN', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </span>
+                </div>
+
                 <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(product.id, 1); }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addToCart(product.id, 1);
+                  }}
                   disabled={product.stockQuantity === 0}
-                  className="flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-400 hover:bg-amber-300 active:scale-95 text-slate-950 text-xs font-extrabold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-md shadow-amber-400/20 transition-all"
+                  className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 flex items-center justify-center shadow-md shadow-amber-400/25 active:scale-90 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shrink-0 border border-amber-300/40"
+                  title="Add to Cart"
                 >
-                  <ShoppingCart className="w-3.5 h-3.5" />
-                  Add
+                  <ShoppingCart className="w-4 h-4 text-slate-950" />
                 </button>
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); addToCart(product.id, 1); navigate('/cart'); }}
-                  disabled={product.stockQuantity === 0}
-                  className="flex items-center justify-center gap-1 px-3 py-2 bg-[#7A153B] hover:bg-[#5E102E] active:scale-95 text-white text-xs font-bold rounded-xl disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer shadow-md shadow-[#7A153B]/40 transition-all"
-                >
-                  Buy Now
-                </button>
-              </div>
+              </motion.div>
             )}
-          </div>
+          </AnimatePresence>
         </div>
       </div>
     </motion.div>

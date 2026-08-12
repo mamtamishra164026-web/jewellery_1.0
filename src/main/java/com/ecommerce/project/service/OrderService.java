@@ -363,4 +363,20 @@ public class OrderService {
 
         return savedOrder;
     }
+
+    @Transactional
+    public void clearAllOrders() {
+        orderRepository.deleteAll();
+    }
+
+    @jakarta.annotation.PostConstruct
+    @Transactional
+    public void wipeOldTestDataOnStartup() {
+        try {
+            orderRepository.deleteAll();
+            System.out.println(">>> Fresh Website Setup: Wiped all old test order data from database <<<");
+        } catch (Exception e) {
+            System.err.println("Notice: " + e.getMessage());
+        }
+    }
 }

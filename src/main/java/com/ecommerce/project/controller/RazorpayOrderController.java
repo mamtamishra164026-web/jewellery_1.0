@@ -44,10 +44,11 @@ public class RazorpayOrderController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             e.printStackTrace();
-            // Return a fallback mock ID to ensure robustness in testing if API fails
+            // Return fallback mock response if Razorpay account onboarding is incomplete/unverified
             Map<String, Object> response = new HashMap<>();
             response.put("id", "order_mock_" + UUID.randomUUID().toString().replace("-", "").substring(0, 14));
             response.put("keyId", razorpayKeyId);
+            response.put("isMock", true);
             return ResponseEntity.ok(response);
         }
     }

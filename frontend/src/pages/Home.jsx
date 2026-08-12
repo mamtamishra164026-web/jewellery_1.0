@@ -11,7 +11,7 @@ import Footer from '../components/Footer';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Heart, SlidersHorizontal, ShoppingBag, User, LogOut, ShieldAlert, LayoutDashboard } from 'lucide-react';
 import { RiAppsLine, RiSmartphoneLine, RiHeadphoneLine, RiGamepadLine, RiWirelessChargingLine } from 'react-icons/ri';
-import { categories } from '../data/mockData';
+import { categories, getCategoryIcon } from '../data/mockData';
 
 /* ──────────────────────────────────────────
    Skeleton Card — shown while loading
@@ -188,6 +188,76 @@ export default function Home() {
     }
   };
 
+  const [sections, setSections] = useState([]);
+
+  const loadSectionsConfig = useCallback(() => {
+    try {
+      const saved = localStorage.getItem('creation_sections_config');
+      if (saved) {
+        setSections(JSON.parse(saved));
+      } else {
+        setSections([
+          {
+            id: 1,
+            name: "⭐ Featured Luxury Collections",
+            priority: 1,
+            active: true,
+            productPriorities: {}
+          }
+        ]);
+      }
+    } catch (e) {
+      console.error('Failed to load sections config:', e);
+    }
+  }, []);
+
+  const [categoriesWithPhotos, setCategoriesWithPhotos] = useState([]);
+
+  const loadCategoriesConfig = useCallback(() => {
+    try {
+      const saved = localStorage.getItem('creation_categories_config');
+      let catMap = {
+        'Kaleera': 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=200&q=80',
+        'Chooda': 'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=200&q=80',
+        'Bridal Jewellery': 'https://images.unsplash.com/photo-1611591475285-a36ad5e14391?w=200&q=80',
+        'Hair Accessories': 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&q=80'
+      };
+
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          parsed.forEach(c => {
+            if (c.name) catMap[c.name] = c.image || catMap[c.name] || 'https://images.unsplash.com/photo-1611591475285-a36ad5e14391?w=200&q=80';
+          });
+        }
+      }
+
+      const productCats = products.map(p => p.category).filter(Boolean);
+      const uniqueNames = ['All', ...new Set([...Object.keys(catMap), ...productCats])];
+
+      const list = uniqueNames.map(name => ({
+        name,
+        image: name === 'All' ? null : (catMap[name] || 'https://images.unsplash.com/photo-1611591475285-a36ad5e14391?w=200&q=80')
+      }));
+
+      setCategoriesWithPhotos(list);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [products]);
+
+  useEffect(() => {
+    loadCategoriesConfig();
+    window.addEventListener('categories-update', loadCategoriesConfig);
+    return () => window.removeEventListener('categories-update', loadCategoriesConfig);
+  }, [loadCategoriesConfig]);
+
+  useEffect(() => {
+    loadSectionsConfig();
+    window.addEventListener('sections-update', loadSectionsConfig);
+    return () => window.removeEventListener('sections-update', loadSectionsConfig);
+  }, [loadSectionsConfig]);
+
   return (
     <div className="min-h-screen bg-[#7A153B] text-white">
       {/* ── Navigation Bar ── */}
@@ -195,6 +265,59 @@ export default function Home() {
 
       {/* ── Hero Banner (Floating Box Container) ── */}
       <Hero />
+
+      {/* ── DYNAMIC FEATURED CUSTOM SECTIONS (Rendered if Category is 'All' and no search query) ── */}
+      {selectedCategory === 'All' && !searchQuery && sections.filter(s => s.active).length > 0 && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6 space-y-12">
+          {sections
+            .filter(s => s.active)
+            .sort((a, b) => (a.priority || 99) - (b.priority || 99))
+            .map((section) => {
+              // Find assigned products for this section sorted by product priority
+              const assignedProductIds = Object.keys(section.productPriorities || {});
+              let sectionProducts = products.filter(p => assignedProductIds.includes(String(p.id)));
+              
+              // Fallback if no specific products assigned: display top rated/featured
+              if (sectionProducts.length === 0) {
+                sectionProducts = products.slice(0, 4);
+              } else {
+                sectionProducts.sort((a, b) => {
+                  const prioA = section.productPriorities[a.id] || 99;
+                  const prioB = section.productPriorities[b.id] || 99;
+                  return prioA - prioB;
+                });
+              }
+
+              if (sectionProducts.length === 0) return null;
+
+              return (
+                <div key={section.id} className="bg-[#330D3A] border border-pink-800/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6">
+                  <div className="flex items-center justify-between border-b border-pink-800/30 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-3 h-8 bg-amber-400 rounded-full" />
+                      <h2 className="text-xl sm:text-2xl font-extrabold text-white font-serif tracking-tight">
+                        {section.name}
+                      </h2>
+                    </div>
+                    <span className="text-xs font-bold text-amber-300 uppercase tracking-widest bg-[#2A082D] px-3 py-1 rounded-xl border border-pink-800/40">
+                      {sectionProducts.length} Exclusive Items
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                    {sectionProducts.map((product) => (
+                      <ProductCard
+                        key={`sec-${section.id}-${product.id}`}
+                        product={product}
+                        onQuickView={(p) => setSelectedProduct(p)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+        </section>
+      )}
 
       {/* ── MAIN CATALOG CONTENT ── */}
       <motion.main 
@@ -212,25 +335,53 @@ export default function Home() {
           transition={{ delay: 0.35, duration: 0.4 }}
           className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 border-b border-[#F39C12]/30 py-4 sm:py-5 mb-8 sm:mb-10"
         >
-          {/* Category Filter Horizontal Pod Strip */}
-          <div className="w-full overflow-x-auto scrollbar-none py-1">
-            <div className="flex items-center gap-3 min-w-max">
-              {categories.map((cat) => {
-                const isSelected = selectedCategory === cat.name;
+          {/* Category Filter Horizontal Photo Circle Strip */}
+          <div className="w-full overflow-x-auto scrollbar-none py-3">
+            <div className="flex items-center gap-3 sm:gap-6 min-w-max px-2">
+              {categoriesWithPhotos.map((catObj) => {
+                const catName = catObj.name;
+                const isSelected = selectedCategory === catName;
+
                 return (
                   <button
-                    key={cat.name}
-                    onClick={() => setSelectedCategory(cat.name)}
-                    className={`flex items-center gap-2.5 px-5 py-3 rounded-2xl font-bold text-xs transition-all duration-300 cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#F39C12] text-[#2A082D] shadow-xl shadow-[#F39C12]/30 scale-[1.02]'
-                        : 'bg-[#330D3A] text-white border border-[#F39C12]/20 hover:bg-[#4A1355] shadow-md'
+                    key={catName}
+                    onClick={() => setSelectedCategory(catName)}
+                    className={`w-20 sm:w-24 shrink-0 flex flex-col items-center gap-2 group cursor-pointer transition-all duration-300 p-1.5 rounded-2xl ${
+                      isSelected ? 'scale-[1.05]' : 'hover:scale-[1.03]'
                     }`}
                   >
-                    <span className={isSelected ? 'text-[#2A082D]' : 'text-[#F39C12]'}>
-                      {cat.icon}
+                    {/* Circular Category Photo Avatar */}
+                    <div className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-full p-0.5 transition-all duration-300 ${
+                      isSelected
+                        ? 'bg-gradient-to-tr from-amber-400 via-yellow-200 to-amber-500 ring-4 ring-amber-400/40 shadow-xl shadow-amber-400/40'
+                        : 'bg-gradient-to-tr from-amber-400/40 via-pink-700/50 to-amber-400/40 group-hover:from-amber-400 group-hover:to-pink-500 shadow-md'
+                    }`}>
+                      <div className="w-full h-full rounded-full overflow-hidden bg-[#2A082D] flex items-center justify-center relative shadow-inner">
+                        {catName === 'All' ? (
+                          <div className={`w-full h-full flex flex-col items-center justify-center ${isSelected ? 'bg-amber-400 text-slate-950 font-extrabold' : 'bg-[#330D3A] text-amber-300'}`}>
+                            <RiAppsLine className="w-6 h-6" />
+                            <span className="text-[8px] uppercase font-extrabold tracking-widest mt-0.5">ALL</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={catObj.image}
+                            alt={catName}
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = 'https://images.unsplash.com/photo-1611591475285-a36ad5e14391?w=200&q=80';
+                            }}
+                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Category Title */}
+                    <span className={`text-[11px] sm:text-xs font-bold font-serif tracking-wide truncate w-full text-center px-0.5 transition-colors ${
+                      isSelected ? 'text-amber-300 drop-shadow-md font-extrabold' : 'text-white/90 group-hover:text-amber-200'
+                    }`}>
+                      {catName}
                     </span>
-                    <span>{cat.name}</span>
                   </button>
                 );
               })}

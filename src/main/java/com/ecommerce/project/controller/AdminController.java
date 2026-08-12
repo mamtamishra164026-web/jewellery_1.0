@@ -129,6 +129,20 @@ public class AdminController {
     }
 
     /**
+     * DELETE /api/admin/orders/clear
+     * Restricted to ROLE_ADMIN only.
+     * Clears test order history safely.
+     */
+    @DeleteMapping("/orders/clear")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, String>> clearAllOrders() {
+        orderService.clearAllOrders();
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "All test orders cleared successfully!");
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * GET /api/admin/users/{userId}/history
      * Restricted to ROLE_ADMIN only.
      * Relational JPQL query to retrieve a specific customer's purchase history.

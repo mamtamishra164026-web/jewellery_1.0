@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import API from '../services/api';
 
 export default function OrdersFulfillmentTab({ orders, ordersLoading, fetchOrders, handleUpdateOrderStatus }) {
   const [orderSubTab, setOrderSubTab] = useState('ALL');
@@ -10,15 +11,20 @@ export default function OrdersFulfillmentTab({ orders, ordersLoading, fetchOrder
   });
 
   return (
-    <div className="space-y-6 animate-slide-up">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-text-primary">Fulfillment & Order History</h2>
-        <button
-          onClick={fetchOrders}
-          className="px-4 py-2 bg-surface-input border border-border hover:border-primary/50 rounded-xl text-xs font-semibold text-text-primary transition-all cursor-pointer"
-        >
-          Refresh Orders
-        </button>
+    <div className="space-y-6 animate-slide-up text-white">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-pink-800/40 pb-4">
+        <div>
+          <h2 className="text-2xl font-bold text-white font-serif">Fulfillment & Order History</h2>
+          <p className="text-xs text-pink-100/70 mt-0.5">Manage live customer orders, update dispatch statuses, and track fulfillment.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchOrders}
+            className="px-4 py-2 bg-[#2A082D] border border-pink-800/40 hover:border-amber-400/50 rounded-xl text-xs font-extrabold text-amber-300 transition-all cursor-pointer shadow-md"
+          >
+            Refresh Orders
+          </button>
+        </div>
       </div>
 
       {/* Premium Sub-Navigation Status Filter Bar */}
