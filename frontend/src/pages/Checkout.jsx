@@ -14,11 +14,7 @@ export default function Checkout() {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/cart');
-    }
+    navigate('/cart');
   };
 
   // Redirection guard
@@ -49,6 +45,7 @@ export default function Checkout() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [showSuccessOrderModal, setShowSuccessOrderModal] = useState(false);
+  const [orderSuccessModal, setOrderSuccessModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [receiptKey, setReceiptKey] = useState('');
 
@@ -140,14 +137,17 @@ export default function Checkout() {
 
       // Fallback for unactivated/pending Razorpay onboarding keys: complete order placement seamlessly
       if (isMock) {
-        const placeRes = await API.post('/api/orders/place', {
+        await API.post('/api/orders/place', {
           addressId: selectedAddressId,
           paymentStatus: 'PAID',
           deliveryFee: deliveryFee
         });
         fetchCart();
         setIsProcessing(false);
-        navigate('/orders', { replace: true });
+        setOrderSuccessModal(true);
+        setTimeout(() => {
+          navigate('/orders', { replace: true });
+        }, 1500);
         return;
       }
 
@@ -160,6 +160,9 @@ export default function Checkout() {
         description: 'Bridal Couture Order',
         order_id: razorpayOrderId,
         handler: async function (response) {
+          // Immediately show full-screen celebration modal to lock screen & eliminate re-click delays
+          setOrderSuccessModal(true);
+          setIsProcessing(true);
           try {
             await API.post('/api/orders/place', {
               addressId: selectedAddressId,
@@ -167,9 +170,11 @@ export default function Checkout() {
               deliveryFee: deliveryFee
             });
             fetchCart();
-            setIsProcessing(false);
-            navigate('/orders', { replace: true });
+            setTimeout(() => {
+              navigate('/orders', { replace: true });
+            }, 1000);
           } catch (placeErr) {
+            setOrderSuccessModal(false);
             setIsProcessing(false);
             setErrorMessage('Order placement failed: ' + (placeErr.response?.data?.message || placeErr.message));
           }
@@ -370,8 +375,8 @@ export default function Checkout() {
                 <span className="font-bold text-white">₹{selectedOrderTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
               </div>
               <div className="flex justify-between text-xs text-pink-100/80">
-                <span>Express Shipping</span>
-                <span className="font-bold text-emerald-300">FREE</span>
+                <span>Express Shipping Fee</span>
+                <span className="font-bold text-amber-300">₹{deliveryFee.toFixed(2)}</span>
               </div>
             </div>
             <div className="border-t border-pink-800/20 pt-4 flex justify-between items-baseline">
@@ -459,6 +464,48 @@ export default function Checkout() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 🎉 Ultra-Luxury Animated Payment Success Celebration Modal */}
+      {orderSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl animate-fade-in text-white">
+          <div className="bg-gradient-to-b from-[#2A082D] to-[#1E0522] border-2 border-amber-400/80 rounded-[36px] p-8 max-w-sm w-full text-center space-y-6 shadow-[0_0_60px_rgba(243,156,18,0.3)] relative overflow-hidden">
+            {/* Background Glow Aura */}
+            <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-400/20 rounded-full blur-3xl" />
+            <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-pink-600/20 rounded-full blur-3xl" />
+
+            {/* Animated 3D Ring Icon */}
+            <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border-4 border-amber-400/30 border-t-amber-400 animate-spin" />
+              <div className="w-18 h-18 bg-gradient-to-br from-amber-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg shadow-amber-400/40">
+                <span className="text-4xl animate-bounce">🎉</span>
+              </div>
+            </div>
+
+            <div>
+              <h2 className="text-2xl font-black text-amber-300 font-serif tracking-tight">Payment Successful!</h2>
+              <p className="text-xs text-emerald-300 font-extrabold uppercase tracking-widest mt-1">Order Confirmed & Placed</p>
+            </div>
+
+            {/* Live Verification Checklist Steps */}
+            <div className="bg-[#1E0522]/90 border border-pink-800/40 rounded-2xl p-3.5 space-y-2 text-left text-xs font-semibold">
+              <div className="flex items-center gap-2 text-emerald-400">
+                <span>✓</span> <span>Payment Transaction Verified</span>
+              </div>
+              <div className="flex items-center gap-2 text-amber-300">
+                <span>✓</span> <span>Order Manifest #Generated</span>
+              </div>
+              <div className="flex items-center gap-2 text-pink-200/90 animate-pulse">
+                <span>⚡</span> <span>Redirecting to Order History...</span>
+              </div>
+            </div>
+
+            {/* Fast Progress Indicator Line */}
+            <div className="w-full bg-[#1E0522] h-2 rounded-full overflow-hidden border border-pink-800/40">
+              <div className="bg-gradient-to-r from-amber-400 via-yellow-400 to-emerald-400 h-full animate-pulse transition-all duration-1000" style={{ width: '100%' }} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

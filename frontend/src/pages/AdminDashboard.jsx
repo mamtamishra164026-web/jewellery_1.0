@@ -6,6 +6,151 @@ import { Camera, Upload, Trash2 } from 'lucide-react';
 import OrdersFulfillmentTab from '../components/OrdersFulfillmentTab';
 import API from '../services/api';
 
+function AdminReviewsTab() {
+  const [adminReviews, setAdminReviews] = useState([]);
+  const [loadingReviews, setLoadingReviews] = useState(true);
+  const [reviewFilter, setReviewFilter] = useState('ALL');
+
+  const fetchAdminReviews = useCallback(async () => {
+    setLoadingReviews(true);
+    try {
+      const res = await API.get('/api/admin/reviews');
+      setAdminReviews(res.data || []);
+    } catch (e) {
+      console.error('Failed to fetch reviews:', e);
+    } finally {
+      setLoadingReviews(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAdminReviews();
+  }, [fetchAdminReviews]);
+
+  const handleUpdateStatus = async (reviewId, newStatus) => {
+    try {
+      await API.put(`/api/admin/reviews/${reviewId}/status`, { status: newStatus });
+      fetchAdminReviews();
+    } catch (err) {
+      alert('Failed to update review status');
+    }
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (!window.confirm('Are you sure you want to delete this review?')) return;
+    try {
+      await API.delete(`/api/admin/reviews/${reviewId}`);
+      fetchAdminReviews();
+    } catch (err) {
+      alert('Failed to delete review');
+    }
+  };
+
+  const filtered = adminReviews.filter(r => reviewFilter === 'ALL' || r.status === reviewFilter);
+
+  return (
+    <div className="space-y-6 animate-slide-up text-white">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-pink-800/40 pb-4">
+        <div>
+          <h2 className="text-2xl font-bold font-serif text-white">⭐ Customer Photo Reviews Moderation</h2>
+          <p className="text-xs text-pink-100/70 mt-0.5">Inspect verified buyer ratings, approve customer photos, and manage store reviews.</p>
+        </div>
+        <button
+          onClick={fetchAdminReviews}
+          className="px-4 py-2 bg-[#2A082D] border border-pink-800/40 hover:border-amber-400/50 rounded-xl text-xs font-extrabold text-amber-300 transition-all cursor-pointer shadow-md"
+        >
+          Refresh Reviews
+        </button>
+      </div>
+
+      {/* Filter status buttons */}
+      <div className="flex flex-wrap gap-2">
+        {['ALL', 'PENDING', 'APPROVED', 'REJECTED'].map((st) => (
+          <button
+            key={st}
+            onClick={() => setReviewFilter(st)}
+            className={`px-3.5 py-2 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+              reviewFilter === st
+                ? 'bg-amber-400 text-slate-950 font-extrabold shadow-md'
+                : 'bg-[#2A082D] text-pink-100 border border-pink-800/40 hover:text-amber-300'
+            }`}
+          >
+            {st} ({adminReviews.filter(r => st === 'ALL' || r.status === st).length})
+          </button>
+        ))}
+      </div>
+
+      {loadingReviews ? (
+        <div className="py-20 flex justify-center">
+          <div className="w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="bg-[#330D3A] border border-pink-800/40 p-12 text-center rounded-2xl">
+          <p className="text-pink-100/80 text-sm font-medium">No reviews match this filter status.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {filtered.map((rev) => (
+            <div key={rev.id} className="bg-[#330D3A] border border-pink-800/40 p-6 rounded-3xl space-y-4 shadow-xl">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-bold text-white text-base">{rev.username}</p>
+                  <p className="text-xs text-amber-300 font-mono">Product ID: #{rev.productId}</p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                  rev.status === 'APPROVED' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30' :
+                  rev.status === 'REJECTED' ? 'bg-rose-500/20 text-rose-300 border border-rose-400/30' :
+                  'bg-amber-400/20 text-amber-300 border border-amber-400/30 animate-pulse'
+                }`}>
+                  {rev.status}
+                </span>
+              </div>
+
+              <div className="flex text-amber-400 text-sm">
+                {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+              </div>
+
+              <p className="text-xs text-pink-100/90 leading-relaxed bg-[#2A082D] p-3 rounded-xl border border-pink-800/30">{rev.comment}</p>
+
+              {rev.imageUrl && (
+                <div className="pt-1">
+                  <p className="text-[10px] font-bold text-amber-300 uppercase tracking-wider mb-1">Customer Uploaded Photo</p>
+                  <img src={rev.imageUrl} alt="Review" className="w-24 h-24 object-cover rounded-xl border border-amber-400/40 shadow-md" />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-pink-800/30">
+                {rev.status !== 'APPROVED' && (
+                  <button
+                    onClick={() => handleUpdateStatus(rev.id, 'APPROVED')}
+                    className="px-3.5 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-xl text-xs font-black cursor-pointer shadow-md transition-all"
+                  >
+                    🟢 Approve
+                  </button>
+                )}
+                {rev.status !== 'REJECTED' && (
+                  <button
+                    onClick={() => handleUpdateStatus(rev.id, 'REJECTED')}
+                    className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold cursor-pointer shadow-md transition-all"
+                  >
+                    🔴 Reject
+                  </button>
+                )}
+                <button
+                  onClick={() => handleDeleteReview(rev.id)}
+                  className="px-3.5 py-1.5 bg-[#2A082D] border border-rose-800/50 hover:bg-rose-900/50 text-rose-300 rounded-xl text-xs font-bold cursor-pointer transition-all"
+                >
+                  🗑️ Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AdminDashboard() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -65,6 +210,7 @@ export default function AdminDashboard() {
     stockQuantity: '',
     imageUrl: '',
     category: '',
+    rating: '4.8',
   });
 
   const DEFAULT_CATEGORIES = ['Kaleera', 'Chooda', 'Bridal Jewellery', 'Hair Accessories'];
@@ -243,22 +389,26 @@ export default function AdminDashboard() {
     alert(`Category "${catName}" added successfully!`);
   };
 
-  const handleDeleteCategory = (catId, catName) => {
+  const handleDeleteCategory = async (catId, catName) => {
     if (!window.confirm(`Are you sure you want to delete category "${catName}"? Products in this category will be safely moved to "General".`)) return;
+    
+    setActionLoading(true);
     const updated = categoriesConfig.filter(c => c.id !== catId);
     saveCategoriesConfig(updated);
 
-    // Safely re-assign any products belonging to this category to "General"
-    products.forEach(async (p) => {
-      if (p.category === catName) {
-        try {
-          await API.put(`/api/products/${p.id}`, { ...p, category: 'General' });
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    });
-    fetchProducts();
+    // Safely re-assign any products belonging to this category to "General" and wait for all DB updates
+    const updatePromises = products
+      .filter(p => p.category === catName)
+      .map(p => API.put(`/api/products/${p.id}`, { ...p, category: 'General' }));
+
+    try {
+      await Promise.all(updatePromises);
+    } catch (err) {
+      console.error('Error reassigning products on category delete:', err);
+    }
+
+    await fetchProducts();
+    setActionLoading(false);
     alert(`Category "${catName}" deleted. Assigned products moved to "General".`);
   };
 
@@ -269,21 +419,26 @@ export default function AdminDashboard() {
     const newName = editingCategory.name.trim();
     const newImg = editingCategory.image;
 
+    setActionLoading(true);
+
     const updated = categoriesConfig.map(c => c.id === editingCategory.id ? { ...c, name: newName, image: newImg } : c);
     saveCategoriesConfig(updated);
 
     if (oldName && oldName !== newName) {
-      products.forEach(async (p) => {
-        if (p.category === oldName) {
-          try {
-            await API.put(`/api/products/${p.id}`, { ...p, category: newName });
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      });
-      fetchProducts();
+      const updatePromises = products
+        .filter(p => p.category === oldName)
+        .map(p => API.put(`/api/products/${p.id}`, { ...p, category: newName }));
+
+      try {
+        await Promise.all(updatePromises);
+      } catch (err) {
+        console.error('Error updating products on category rename:', err);
+      }
+
+      await fetchProducts();
     }
+
+    setActionLoading(false);
     setEditingCategory(null);
     alert('Category updated successfully!');
   };
@@ -566,6 +721,7 @@ export default function AdminDashboard() {
         stockQuantity: Math.floor(Number(formData.stockQuantity)),
         imageUrl: formData.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&q=80',
         category: activeCategory,
+        rating: Number(formData.rating || 4.8),
       });
 
       setSuccessMsg('Product Added Successfully!');
@@ -577,6 +733,7 @@ export default function AdminDashboard() {
         stockQuantity: '',
         imageUrl: '',
         category: '',
+        rating: '4.8',
       });
       setNewCategoryName('');
       setNewCategoryPhoto('');
@@ -649,6 +806,7 @@ export default function AdminDashboard() {
       const payload = {
         ...editingProduct,
         category: activeCategory,
+        rating: Number(editingProduct.rating || 4.8),
       };
 
       await API.put(`/api/products/${editingProduct.id}`, payload);
@@ -674,12 +832,12 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-9 h-9 bg-primary/20 rounded-xl flex items-center justify-center group-hover:bg-primary/30 transition-colors">
-                <svg className="w-5 h-5 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <div className="w-9 h-9 bg-[#2A082D] border border-pink-800/40 rounded-xl flex items-center justify-center group-hover:bg-[#330D3A] transition-colors shadow-md">
+                <svg className="w-5 h-5 text-amber-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
               </div>
-              <span className="text-lg font-bold text-text-primary">Back to Store</span>
+              <span className="text-lg font-bold text-white font-serif">Back to Store</span>
             </Link>
 
             <div className="flex items-center gap-3">
@@ -712,6 +870,7 @@ export default function AdminDashboard() {
             { id: 'analytics', label: 'Dashboard & Analytics' },
             { id: 'catalog', label: 'Manage Catalog' },
             { id: 'orders', label: 'Orders Fulfillment' },
+            { id: 'reviews', label: '⭐ Reviews Moderation' },
             { id: 'add-product', label: 'Add New Product' },
             { id: 'users', label: 'User Roles (RBAC)' },
             { id: 'banner', label: '🖼️ Banner Engine' },
@@ -1130,6 +1289,11 @@ export default function AdminDashboard() {
           <OrdersFulfillmentTab orders={orders} ordersLoading={ordersLoading} fetchOrders={fetchOrders} handleUpdateOrderStatus={handleUpdateOrderStatus} />
         )}
 
+        {/* TAB 3.5: REVIEWS MODERATION */}
+        {activeTab === 'reviews' && (
+          <AdminReviewsTab />
+        )}
+
         {/* TAB 4: ADD NEW PRODUCT */}
         {activeTab === 'add-product' && (
           <div className="max-w-3xl mx-auto py-6 animate-slide-up">
@@ -1268,7 +1432,7 @@ export default function AdminDashboard() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div>
                     <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-2">Price (INR) *</label>
                     <div className="relative">
@@ -1296,6 +1460,22 @@ export default function AdminDashboard() {
                       onChange={handleFormChange}
                       placeholder="50"
                       className="w-full px-4 py-3 bg-[#2A082D] border border-pink-800/50 rounded-xl text-white placeholder:text-pink-200/50 focus:border-amber-400 outline-none font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-2">⭐ Base Rating (1.0 - 5.0) *</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="1.0"
+                      max="5.0"
+                      name="rating"
+                      required
+                      value={formData.rating}
+                      onChange={handleFormChange}
+                      placeholder="4.8"
+                      className="w-full px-4 py-3 bg-[#2A082D] border border-pink-800/50 rounded-xl text-amber-300 font-extrabold text-base outline-none focus:border-amber-400"
                     />
                   </div>
                 </div>
@@ -2408,7 +2588,7 @@ export default function AdminDashboard() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-1.5">Price (INR ₹) *</label>
                       <input
@@ -2429,6 +2609,20 @@ export default function AdminDashboard() {
                         value={editingProduct.stockQuantity}
                         onChange={(e) => setEditingProduct({ ...editingProduct, stockQuantity: Math.floor(Number(e.target.value)) })}
                         className="w-full px-4 py-3 bg-[#2A082D] border border-pink-800/50 rounded-xl text-white font-extrabold text-base outline-none focus:border-amber-400"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-amber-300 uppercase tracking-wider mb-1.5">⭐ Base Rating (1.0 - 5.0) *</label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="1.0"
+                        max="5.0"
+                        required
+                        value={editingProduct.rating || 4.8}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, rating: Number(e.target.value) })}
+                        className="w-full px-4 py-3 bg-[#2A082D] border border-pink-800/50 rounded-xl text-amber-300 font-extrabold text-base outline-none focus:border-amber-400"
                       />
                     </div>
                   </div>

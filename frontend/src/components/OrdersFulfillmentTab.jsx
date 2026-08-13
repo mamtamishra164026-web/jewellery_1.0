@@ -76,7 +76,9 @@ export default function OrdersFulfillmentTab({ orders, ordersLoading, fetchOrder
         </div>
 
         <div class="total-box">
-          <p>Total Paid: ₹${Number(order.totalAmount).toFixed(2)}</p>
+          <p style="margin:4px 0; font-size:14px; color:#555;">Items Subtotal: ₹${(order.items?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0).toFixed(2)}</p>
+          <p style="margin:4px 0; font-size:14px; color:#555;">Express Delivery Charge: ₹${((Number(order.totalAmount) - (order.items?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0)) > 0 ? (Number(order.totalAmount) - (order.items?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0)).toFixed(2) : '30.00')}</p>
+          <p style="margin:8px 0; font-size:18px; color:#7A153B; font-weight:bold;">Grand Total Paid: ₹${Number(order.totalAmount).toFixed(2)}</p>
         </div>
 
         <script>
@@ -277,14 +279,28 @@ export default function OrdersFulfillmentTab({ orders, ordersLoading, fetchOrder
             </div>
 
             {/* Total Financial Summary Footer */}
-            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-[#2A082D] border border-amber-400/30 p-4 rounded-2xl">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#2A082D] border border-amber-400/30 p-4 rounded-2xl">
               <div>
                 <span className="text-xs text-pink-100/70">Payment Status:</span>
                 <span className="ml-2 font-bold text-emerald-400 uppercase tracking-wider">{viewingOrderDetails.paymentStatus || 'PAID'}</span>
               </div>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-pink-100/80">Grand Total:</span>
-                <span className="text-2xl font-black text-amber-300">₹{Number(viewingOrderDetails.totalAmount).toFixed(2)}</span>
+              <div className="flex flex-col items-start sm:items-end gap-1">
+                {(() => {
+                  const subtotal = viewingOrderDetails.items?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0;
+                  const deliveryFee = Number(viewingOrderDetails.totalAmount) - subtotal;
+                  return (
+                    <>
+                      <div className="text-xs text-pink-100/80 flex gap-4">
+                        <span>Subtotal: <strong className="text-white">₹{subtotal.toFixed(2)}</strong></span>
+                        <span>Express Delivery: <strong className="text-amber-300">₹{deliveryFee > 0 ? deliveryFee.toFixed(2) : '30.00'}</strong></span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-pink-100/80">Grand Total:</span>
+                        <span className="text-2xl font-black text-amber-300">₹{Number(viewingOrderDetails.totalAmount).toFixed(2)}</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             </div>
 

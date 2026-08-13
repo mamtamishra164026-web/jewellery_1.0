@@ -63,6 +63,12 @@ public class ProductService {
         existing.setStockQuantity(updatedProduct.getStockQuantity());
         // Explicitly overwrite the image URL parameter directly to prevent any local caching/stale reads
         existing.setImageUrl(updatedProduct.getImageUrl());
+        if (updatedProduct.getCategory() != null) {
+            existing.setCategory(updatedProduct.getCategory());
+        }
+        if (updatedProduct.getRating() != null) {
+            existing.setRating(updatedProduct.getRating());
+        }
         
         // Ensure immediate flush to physical database to bypass JPA transactional write-behind caching
         return productRepository.saveAndFlush(existing);

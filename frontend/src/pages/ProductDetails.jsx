@@ -12,11 +12,7 @@ export default function ProductDetails() {
   const { cartItems, addToCart, updateQuantity, totalCartItems } = useCart();
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
+    navigate('/');
   };
 
   const [product, setProduct] = useState(null);
@@ -43,6 +39,20 @@ export default function ProductDetails() {
 
     fetchProduct();
   }, [id]);
+
+  // Fetch Product Reviews
+  const [reviewsData, setReviewsData] = useState({ reviews: [], totalReviews: 0, averageRating: 0.0 });
+
+  useEffect(() => {
+    if (!id) return;
+    API.get(`/api/public/reviews/product/${id}`)
+      .then((res) => {
+        if (res.data) setReviewsData(res.data);
+      })
+      .catch((err) => console.log('Reviews fetch error:', err));
+  }, [id]);
+
+  const displayRating = reviewsData.totalReviews > 0 ? reviewsData.averageRating : (product?.rating || 4.8);
 
   const cartItem = cartItems.find((item) => item.product.id === product?.id);
 
@@ -158,6 +168,17 @@ export default function ProductDetails() {
 
             {/* Add to Cart Layout Box */}
             <div className="mt-8 pt-8 border-t border-[#F39C12]/20 space-y-6">
+              {/* 🔥 Low Stock Urgency Alert Banner */}
+              {product.stockQuantity > 0 && product.stockQuantity <= 3 && (
+                <div className="bg-gradient-to-r from-red-600/30 via-rose-600/30 to-amber-500/20 border-2 border-red-500/60 p-4 rounded-2xl flex items-center gap-3 text-red-200 animate-pulse shadow-lg shadow-red-900/30">
+                  <span className="text-2xl animate-bounce">🔥</span>
+                  <div className="text-xs">
+                    <p className="font-extrabold text-white text-sm uppercase tracking-wide">Hurry! Only {product.stockQuantity} Unit{product.stockQuantity > 1 ? 's' : ''} Left in Stock!</p>
+                    <p className="text-red-200/90 mt-0.5 font-medium">High demand bridal piece. Order before it sells out!</p>
+                  </div>
+                </div>
+              )}
+
               {user?.role === 'ROLE_ADMIN' ? (
                 <div className="flex items-center justify-center py-4 px-6 bg-[#2A0835] border border-[#F39C12]/30 text-[#F39C12] text-sm font-bold rounded-2xl shadow-inner select-none tracking-wide text-center">
                   Admin View Only
@@ -243,6 +264,53 @@ export default function ProductDetails() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* ⭐ Verified Customer Photo Reviews Section */}
+        <div className="mt-12 bg-[#3B0A45] border border-[#F39C12]/30 rounded-3xl p-8 lg:p-12 shadow-xl space-y-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-[#F39C12]/20 pb-6">
+            <div>
+              <h2 className="text-2xl font-bold font-serif text-white">Customer Reviews & Ratings</h2>
+              <div className="flex items-center gap-3 mt-1">
+                <span className="text-amber-400 font-extrabold text-lg">★ {displayRating.toFixed(1)}</span>
+                <span className="text-[#E2B6DC]/80 text-xs font-semibold">({reviewsData.totalReviews} Verified Review{reviewsData.totalReviews !== 1 ? 's' : ''})</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Customer Reviews List */}
+          {reviewsData.reviews.length === 0 ? (
+            <div className="bg-[#2A0835] border border-[#F39C12]/20 p-8 rounded-2xl text-center space-y-2">
+              <p className="text-white font-bold text-sm">No verified buyer reviews yet.</p>
+              <p className="text-xs text-[#E2B6DC]/70">Be the first verified buyer to rate and review this bridal piece after delivery!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {reviewsData.reviews.map((rev) => (
+                <div key={rev.id} className="bg-[#2A0835] border border-[#F39C12]/30 rounded-2xl p-6 space-y-4 shadow-md">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-white text-sm">{rev.username}</p>
+                      <span className="inline-block mt-0.5 px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 rounded-full text-[10px] font-extrabold">
+                        Verified Purchaser 🟢
+                      </span>
+                    </div>
+                    <div className="flex text-amber-400 text-sm">
+                      {'★'.repeat(rev.rating)}{'☆'.repeat(5 - rev.rating)}
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-[#E2B6DC] leading-relaxed whitespace-pre-wrap">{rev.comment}</p>
+
+                  {rev.imageUrl && (
+                    <div className="pt-2">
+                      <img src={rev.imageUrl} alt="Customer Review Photo" className="w-20 h-20 object-cover rounded-xl border border-amber-400/40" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
     </div>

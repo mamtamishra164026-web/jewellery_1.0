@@ -12,11 +12,7 @@ export default function Cart() {
   const navigate = useNavigate();
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-    } else {
-      navigate('/');
-    }
+    navigate('/');
   };
 
   const [isCheckingOut, setIsCheckingOut] = useState(false);
@@ -40,15 +36,17 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen bg-[#7A153B] text-white pb-24 sm:pb-8 flex flex-col font-sans">
+      {/* Top Main Navbar */}
       <Navbar />
 
-      <main className="flex-grow w-full max-w-md mx-auto px-4 box-border md:max-w-2xl pt-5 pb-8">
+      {/* Main Content */}
+      <main className="flex-grow w-full max-w-4xl mx-auto px-4 pt-4 pb-8">
         {/* Header Strip */}
         <div className="flex items-center justify-between mb-6">
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={handleBack}
-            className="w-10 h-10 rounded-full bg-[#2A082D] flex items-center justify-center border border-[#F39C12]/30 shadow-md text-[#F39C12] cursor-pointer hover:bg-[#330D3A] transition-colors"
+            className="w-10 h-10 rounded-full bg-[#2A082D] flex items-center justify-center border border-[#F39C12]/40 shadow-md text-[#F39C12] cursor-pointer hover:bg-[#330D3A] active:scale-95 transition-all"
           >
             <HiArrowLeft className="w-5 h-5" />
           </motion.button>
@@ -179,8 +177,8 @@ export default function Cart() {
                   <span className="font-bold text-white">₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
                 <div className="flex justify-between text-xs text-[#E2B6DC]">
-                  <span>Express Shipping</span>
-                  <span className="font-bold text-emerald-400">FREE</span>
+                  <span>Express Shipping Fee</span>
+                  <span className="font-bold text-[#F39C12]">₹{deliveryFee.toFixed(2)}</span>
                 </div>
               </div>
               <div className="border-t border-[#F39C12]/20 pt-4 flex justify-between items-baseline">

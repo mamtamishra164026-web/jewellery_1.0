@@ -98,7 +98,7 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
 
     const checkPlacedOrders = async () => {
       try {
-        const res = await API.get('/api/orders/all');
+        const res = await API.get('/api/admin/orders');
         const orders = res.data || [];
         const newCount = orders.filter(o => (o.orderStatus || 'PLACED') === 'PLACED').length;
 
@@ -303,7 +303,7 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
               {user?.role !== 'ROLE_ADMIN' && (
                 <Link
                   to="/wishlist"
-                  className="relative p-2 text-[#F39C12] hover:text-white hover:bg-[#2A0835] rounded-xl transition-all border border-[#F39C12]/20 bg-[#3B0A45] shadow-md"
+                  className="relative p-2 text-[#F39C12] hover:text-white hover:bg-[#2A0835] rounded-xl transition-all border border-[#F39C12]/20 bg-[#3B0A45] shadow-md flex items-center gap-1.5"
                   title="Wishlist"
                 >
                   <Heart className="w-4.5 h-4.5" />
@@ -319,10 +319,11 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
               {user?.role !== 'ROLE_ADMIN' && (
                 <Link
                   to="/orders"
-                  className="relative p-2 text-[#F39C12] hover:text-white hover:bg-[#2A0835] rounded-xl transition-all border border-[#F39C12]/20 bg-[#3B0A45] shadow-md"
+                  className="relative px-3 py-1.5 text-[#F39C12] hover:text-white hover:bg-[#2A0835] rounded-xl transition-all border border-[#F39C12]/20 bg-[#3B0A45] shadow-md flex items-center gap-1.5"
                   title="My Orders"
                 >
-                  <HiOutlineCollection className="w-4.5 h-4.5" />
+                  <HiOutlineCollection className="w-4 h-4" />
+                  <span className="text-xs font-bold">My Orders</span>
                 </Link>
               )}
 
@@ -330,12 +331,13 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
               {user?.role !== 'ROLE_ADMIN' && (
                 <Link
                   to="/cart"
-                  className="relative p-2 text-[#F39C12] hover:text-white hover:bg-[#2A0835] rounded-xl transition-all border border-[#F39C12]/20 bg-[#3B0A45] shadow-md"
+                  className="relative px-3 py-1.5 text-[#F39C12] hover:text-white hover:bg-[#2A0835] rounded-xl transition-all border border-[#F39C12]/20 bg-[#3B0A45] shadow-md flex items-center gap-1.5"
                   title="Cart"
                 >
-                  <ShoppingBag className="w-4.5 h-4.5" />
+                  <ShoppingBag className="w-4 h-4" />
+                  <span className="text-xs font-bold">Cart</span>
                   {totalCartItems > 0 && (
-                    <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-[#F39C12] text-[8px] font-bold text-[#2A0835] ring-2 ring-[#3B0A45]">
+                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-[#F39C12] text-[9px] font-black text-[#2A0835]">
                       {totalCartItems}
                     </span>
                   )}
@@ -388,7 +390,42 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
 
                     {/* Desktop Account Dropdown Card */}
                     {desktopDropdownOpen && (
-                      <div className="absolute right-0 top-10 w-44 bg-[#2A0835] border border-[#F39C12]/30 shadow-2xl rounded-2xl p-1.5 z-50 animate-slide-up flex flex-col gap-0.5">
+                      <div className="absolute right-0 top-10 w-48 bg-[#2A0835] border border-[#F39C12]/30 shadow-2xl rounded-2xl p-1.5 z-50 animate-slide-up flex flex-col gap-1">
+                        {user?.role !== 'ROLE_ADMIN' && (
+                          <>
+                            <button
+                              onClick={() => { setDesktopDropdownOpen(false); navigate('/cart'); }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white hover:bg-[#3B0A45] font-bold rounded-xl transition-colors text-left cursor-pointer"
+                            >
+                              <ShoppingBag className="w-4 h-4 text-[#F39C12]" />
+                              Shopping Cart {totalCartItems > 0 ? `(${totalCartItems})` : ''}
+                            </button>
+                            <button
+                              onClick={() => { setDesktopDropdownOpen(false); navigate('/wishlist'); }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white hover:bg-[#3B0A45] font-bold rounded-xl transition-colors text-left cursor-pointer"
+                            >
+                              <Heart className="w-4 h-4 text-rose-400" />
+                              My Wishlist {wishlistCount > 0 ? `(${wishlistCount})` : ''}
+                            </button>
+                            <button
+                              onClick={() => { setDesktopDropdownOpen(false); navigate('/orders'); }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white hover:bg-[#3B0A45] font-bold rounded-xl transition-colors text-left cursor-pointer"
+                            >
+                              <ClipboardList className="w-4 h-4 text-[#F39C12]" />
+                              My Orders
+                            </button>
+                            <div className="border-t border-[#F39C12]/20 my-0.5" />
+                          </>
+                        )}
+                        {user?.role === 'ROLE_ADMIN' && (
+                          <button
+                            onClick={() => { setDesktopDropdownOpen(false); navigate('/admin'); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[#F39C12] hover:bg-[#3B0A45] font-extrabold rounded-xl transition-colors text-left cursor-pointer"
+                          >
+                            <ClipboardList className="w-4 h-4" />
+                            Admin Console
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             setDesktopDropdownOpen(false);
@@ -482,6 +519,34 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
                         My Profile
                       </button>
 
+                      {user?.role !== 'ROLE_ADMIN' && (
+                        <>
+                          <button
+                            onClick={() => { setMobileMenuOpen(false); navigate('/cart'); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white hover:bg-[#3B0A45] font-bold rounded-xl transition-colors text-left cursor-pointer"
+                          >
+                            <ShoppingBag className="w-4 h-4 text-[#F39C12]" />
+                            Shopping Cart {totalCartItems > 0 ? `(${totalCartItems})` : ''}
+                          </button>
+
+                          <button
+                            onClick={() => { setMobileMenuOpen(false); navigate('/wishlist'); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white hover:bg-[#3B0A45] font-bold rounded-xl transition-colors text-left cursor-pointer"
+                          >
+                            <Heart className="w-4 h-4 text-rose-400" />
+                            My Wishlist {wishlistCount > 0 ? `(${wishlistCount})` : ''}
+                          </button>
+
+                          <button
+                            onClick={() => { setMobileMenuOpen(false); navigate('/orders'); }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-white hover:bg-[#3B0A45] font-bold rounded-xl transition-colors text-left cursor-pointer"
+                          >
+                            <ClipboardList className="w-4 h-4 text-[#F39C12]" />
+                            My Orders
+                          </button>
+                        </>
+                      )}
+
                       <button
                         onClick={() => {
                           setMobileMenuOpen(false);
@@ -530,9 +595,9 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
         </div>
 
         {/* ── SECONDARY NAVBAR CATEGORIES STRIP (#2A0835 Deep Jamun) ── */}
-        <div className="bg-[#2A0835] border-t border-[#F39C12]/30 text-white shadow-md">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-10 overflow-x-auto scrollbar-none gap-2 text-xs font-bold font-sans">
+        <div className="bg-[#2A0835] border-t border-[#F39C12]/30 text-white shadow-md w-full max-w-full overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full max-w-full overflow-hidden">
+            <div className="flex items-center justify-between h-10 overflow-x-auto no-scrollbar gap-2 text-xs font-bold font-sans w-full max-w-full">
               <div className="flex items-center gap-1 sm:gap-4">
                 {navCategories.map((catName) => (
                   <button
@@ -590,18 +655,29 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
 
               <button
                 onClick={() => {
-                  navigate('/admin', { state: { activeTab: 'orders' } });
+                  navigate('/admin?tab=orders');
                 }}
-                className={`flex flex-col items-center justify-center p-2 rounded-full transition-all cursor-pointer ${
-                  location.pathname.startsWith('/admin') && location.hash.includes('orders') ? 'text-slate-950 bg-amber-400 shadow-md font-bold scale-105 px-3' : 'text-amber-300 hover:text-white'
+                className={`flex flex-col items-center justify-center p-2 rounded-full transition-all cursor-pointer relative ${
+                  placedOrdersCount > 0
+                    ? 'bg-gradient-to-r from-red-600 to-rose-600 text-white font-black animate-pulse shadow-lg shadow-red-600/50 px-3 border border-amber-300'
+                    : location.pathname.startsWith('/admin') && location.search.includes('tab=orders')
+                    ? 'text-slate-950 bg-amber-400 shadow-md font-bold scale-105 px-3'
+                    : 'text-amber-300 hover:text-white'
                 }`}
                 title="Fulfillment"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 014 0m10 0a2 2 0 104 0m-4 0a2 2 0 014 0" />
-                </svg>
-                <span className="text-[9px] font-bold mt-0.5">Orders</span>
+                <div className="relative">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 014 0m10 0a2 2 0 104 0m-4 0a2 2 0 014 0" />
+                  </svg>
+                  {placedOrdersCount > 0 && (
+                    <span className="absolute -top-2 -right-3.5 px-1.5 py-0.5 bg-red-600 text-white font-black text-[9px] rounded-full border-2 border-slate-950 animate-bounce shadow-md">
+                      🚨 {placedOrdersCount}
+                    </span>
+                  )}
+                </div>
+                <span className="text-[9px] font-bold mt-0.5">Orders {placedOrdersCount > 0 ? `(${placedOrdersCount})` : ''}</span>
               </button>
             </>
           ) : (
