@@ -31,10 +31,11 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (location.state?.activeTab === 'orders') {
+    const searchParams = new URLSearchParams(location.search);
+    if (location.state?.activeTab === 'orders' || searchParams.get('tab') === 'orders') {
       setActiveTab('orders');
     }
-  }, [location.state]);
+  }, [location.state, location.search]);
 
   // Users state (for user role management)
   const [users, setUsers] = useState([]);

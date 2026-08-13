@@ -114,34 +114,41 @@ export default function MyOrders() {
                   </div>
                 </div>
 
-                {/* Items Purchased list */}
-                <div className="space-y-4">
-                  <p className="text-xs font-bold text-amber-300 uppercase tracking-wider">Items Purchased</p>
-                  <div className="divide-y divide-pink-800/30">
-                    {order.items?.map((item) => (
-                      <div key={item.id} className="flex justify-between items-center py-3 first:pt-0 last:pb-0 gap-3 sm:gap-4">
-                        <div className="flex items-center gap-3 min-w-0 flex-grow">
-                          <img
-                            src={item.product?.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=40&q=80'}
-                            alt=""
-                            className="w-10 h-10 object-cover rounded-lg border border-border shrink-0"
-                          />
-                          <div className="min-w-0 flex-grow">
-                            <p className="text-sm font-bold text-text-primary truncate max-w-[110px] xs:max-w-[165px] sm:max-w-[340px]">{item.product?.name}</p>
-                            <p className="text-text-muted text-xs">
-                              {item.quantity} unit{item.quantity > 1 ? 's' : ''} at ₹{Number(item.price).toFixed(2)}
+                  {/* Items Purchased list */}
+                  <div className="space-y-4">
+                    <p className="text-xs font-bold text-amber-300 uppercase tracking-wider">Items Purchased</p>
+                    <div className="divide-y divide-pink-800/30">
+                      {order.items?.map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => item.product?.id && navigate(`/product/${item.product.id}`)}
+                          className="flex justify-between items-center py-3.5 first:pt-0 last:pb-0 gap-3 sm:gap-4 group cursor-pointer hover:bg-pink-900/20 px-2 rounded-2xl transition-all"
+                        >
+                          <div className="flex items-center gap-3 min-w-0 flex-grow">
+                            <img
+                              src={item.product?.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=40&q=80'}
+                              alt={item.product?.name || ''}
+                              className="w-12 h-12 object-cover rounded-xl border border-amber-400/30 shrink-0 group-hover:scale-105 transition-transform"
+                            />
+                            <div className="min-w-0 flex-grow">
+                              <p className="text-sm font-bold text-white group-hover:text-amber-300 transition-colors truncate max-w-[150px] xs:max-w-[200px] sm:max-w-[380px]">
+                                {item.product?.name}
+                              </p>
+                              <p className="text-pink-100/70 text-xs mt-0.5">
+                                {item.quantity} unit{item.quantity > 1 ? 's' : ''} at ₹{Number(item.price).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <p className="text-sm font-extrabold text-amber-300">
+                              ₹{Number(item.price * item.quantity).toFixed(2)}
                             </p>
+                            <span className="text-[9px] font-bold text-pink-200/60 uppercase tracking-wider group-hover:underline">View Product →</span>
                           </div>
                         </div>
-                        <div className="text-right shrink-0">
-                          <p className="text-sm font-bold text-text-primary">
-                            ₹{Number(item.price * item.quantity).toFixed(2)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
 
                 {(() => {
                   const subtotal = order.items?.reduce((sum, item) => sum + (Number(item.price) * item.quantity), 0) || 0;

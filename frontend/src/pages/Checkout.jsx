@@ -140,19 +140,14 @@ export default function Checkout() {
 
       // Fallback for unactivated/pending Razorpay onboarding keys: complete order placement seamlessly
       if (isMock) {
-        setShowSuccessOrderModal(true);
         const placeRes = await API.post('/api/orders/place', {
           addressId: selectedAddressId,
           paymentStatus: 'PAID',
           deliveryFee: deliveryFee
         });
-        setReceiptKey(placeRes.data.razorpayOrderId || 'TXN_' + Date.now());
-        setIsSuccess(true);
-        setIsProcessing(false);
         fetchCart();
-        setTimeout(() => {
-          navigate('/orders', { replace: true });
-        }, 3500);
+        setIsProcessing(false);
+        navigate('/orders', { replace: true });
         return;
       }
 
@@ -162,30 +157,20 @@ export default function Checkout() {
         amount: orderTotal * 100, // in paise
         currency: 'INR',
         name: 'CreationHub',
-        description: 'Premium Lifestyle Gear Purchase',
+        description: 'Bridal Couture Order',
         order_id: razorpayOrderId,
         handler: async function (response) {
-          setIsProcessing(false);
-          setShowSuccessOrderModal(true);
           try {
-            // 3. Hit our /api/orders/place to place order, clear cart and mark PAID
-            // Pass deliveryFee so the backend can add it to the stored totalAmount
-            const placeRes = await API.post('/api/orders/place', {
+            await API.post('/api/orders/place', {
               addressId: selectedAddressId,
               paymentStatus: 'PAID',
               deliveryFee: deliveryFee
             });
-
-            setReceiptKey(placeRes.data.razorpayOrderId || response.razorpay_order_id);
-            setIsSuccess(true);
             fetchCart();
-
-            setTimeout(() => {
-              navigate('/orders', { replace: true });
-            }, 4000);
-
+            setIsProcessing(false);
+            navigate('/orders', { replace: true });
           } catch (placeErr) {
-            setShowSuccessOrderModal(false);
+            setIsProcessing(false);
             setErrorMessage('Order placement failed: ' + (placeErr.response?.data?.message || placeErr.message));
           }
         },

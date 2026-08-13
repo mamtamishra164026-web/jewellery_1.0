@@ -58,6 +58,71 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
   const [inputValue, setInputValue] = useState(searchQuery || '');
   const searchRef = useRef(null);
 
+  // Admin Live Order Alert State
+  const [placedOrdersCount, setPlacedOrdersCount] = useState(0);
+  const prevPlacedCountRef = useRef(0);
+  const isAdmin = isAuthenticated && (user?.role === 'ROLE_ADMIN' || user?.username === 'admin');
+
+  // Request Web Notification permission for Admin
+  useEffect(() => {
+    if (isAdmin && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, [isAdmin]);
+
+  // Audio Chime Synth using Web Audio API
+  const playOrderChime = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.5);
+    } catch (e) {
+      console.log('Audio chime exception:', e);
+    }
+  };
+
+  // Poll for PLACED orders every 8 seconds
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const checkPlacedOrders = async () => {
+      try {
+        const res = await API.get('/api/orders/all');
+        const orders = res.data || [];
+        const newCount = orders.filter(o => (o.orderStatus || 'PLACED') === 'PLACED').length;
+
+        if (newCount > prevPlacedCountRef.current && prevPlacedCountRef.current !== 0) {
+          playOrderChime();
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🚨 New Order Received!', {
+              body: `You have ${newCount} new order(s) awaiting fulfillment in Admin Panel.`,
+              icon: '/favicon.ico'
+            });
+          }
+        }
+        prevPlacedCountRef.current = newCount;
+        setPlacedOrdersCount(newCount);
+      } catch (err) {
+        // Ignore network errors during polling
+      }
+    };
+
+    checkPlacedOrders();
+    const interval = setInterval(checkPlacedOrders, 8000);
+    return () => clearInterval(interval);
+  }, [isAdmin]);
+
   // Sync external search query updates
   useEffect(() => {
     setInputValue(searchQuery || '');
@@ -277,14 +342,26 @@ export default function Navbar({ backToStore = false, onSelectCategory }) {
                 </Link>
               )}
 
-              {/* Admin Console Link */}
-              {user?.role === 'ROLE_ADMIN' && (
-                <Link
-                  to="/admin"
-                  className="px-3.5 py-1.5 text-xs font-bold text-[#F39C12] border border-[#F39C12]/40 bg-[#2A0835] hover:bg-[#8B005D] hover:text-white rounded-xl transition-all"
-                >
-                  Admin Console
-                </Link>
+              {/* Admin Console Link & Live Glowing Red Order Alert Badge */}
+              {isAdmin && (
+                <div className="flex items-center gap-2">
+                  {placedOrdersCount > 0 && (
+                    <button
+                      onClick={() => navigate('/admin?tab=orders')}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white rounded-xl text-xs font-black tracking-wider shadow-lg shadow-red-600/50 animate-pulse border border-red-300 cursor-pointer transition-all hover:scale-105"
+                      title="Click to view new orders in fulfillment console"
+                    >
+                      <span>🚨 {placedOrdersCount} NEW ORDER{placedOrdersCount > 1 ? 'S' : ''}!</span>
+                      <span className="bg-white text-red-700 px-2 py-0.5 rounded-md text-[10px] font-black uppercase">View →</span>
+                    </button>
+                  )}
+                  <Link
+                    to="/admin"
+                    className="px-3.5 py-1.5 text-xs font-bold text-[#F39C12] border border-[#F39C12]/40 bg-[#2A0835] hover:bg-[#8B005D] hover:text-white rounded-xl transition-all"
+                  >
+                    Admin Console
+                  </Link>
+                </div>
               )}
 
               {/* User Profile Badge */}
